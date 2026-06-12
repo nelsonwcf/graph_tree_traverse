@@ -1,0 +1,49 @@
+Test Schema
+
+Connected Tables
+
+customers
+
+ColumnTypeKeyRAG Metadatacustomer_idINTPKcustomer_id.customers:Unique identifier for a customernameVARCHARname.customers:Full name of the customeremailVARCHARemail.customers:Email address of the customer
+
+
+orders
+
+ColumnTypeKeyRAG Metadataorder_idINTPKorder_id.orders:Unique identifier for an ordercustomer_idINTFK → customers.customer_idcustomer_id.orders:The customer who placed the orderorder_dateDATEorder_date.orders:The date the order was placed
+
+
+order_items
+
+ColumnTypeKeyRAG Metadataorder_idINTPK, FK → orders.order_idorder_id.order_items:The order this item belongs toproduct_idINTPK, FK → products.product_idproduct_id.order_items:The product included in the orderquantityINTquantity.order_items:Number of units of the product ordered
+
+
+Composite PK: (order_id, product_id)
+
+
+
+
+products
+
+ColumnTypeKeyRAG Metadataproduct_idINTPKproduct_id.products:Unique identifier for a productnameVARCHARname.products:Commercial name of the productcategory_idINTFK → categories.category_idcategory_id.products:The category this product belongs to
+
+
+categories
+
+ColumnTypePK/FKRAG Metadatacategory_idINTPKcategory_id.categories:Unique identifier for a product categorynameVARCHARname.categories:Name of the product categorydescriptionVARCHARdescription.categories:Brief description of what the category contains
+
+
+Disconnected Table
+
+audit_logs
+
+ColumnTypeKeyRAG Metadatalog_idINTPKlog_id.audit_logs:Unique identifier for an audit log entryevent_typeVARCHARevent_type.audit_logs:Type of system event that was recordedtimestampDATETIMEtimestamp.audit_logs:Date and time the event occurred
+
+
+No FK relationships — isolated from all other tables.
+
+
+
+
+FK Relationships Summary
+
+FromColumnToorderscustomer_idcustomers.customer_idorder_itemsorder_idorders.order_idorder_itemsproduct_idproducts.product_idproductscategory_idcategories.category_id
