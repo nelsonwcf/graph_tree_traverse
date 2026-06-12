@@ -164,16 +164,62 @@ def find_minimum_subset(schema: Schema, required_tables: list[str]) -> list[list
     return result
 
 
-def get_minimal_subschema(schema_def: dict[str, dict], subset: list[str]) -> list[str]:
-    """Find the minimum set of tables and columns needed to answer a query.
+def get_minimal_subschema(schema_def: dict[str, dict[str, list[str]]], subset: list[str]) -> list[str]:
+    """Return the minimum set of tables and columns needed to answer a query.
 
     Builds a schema graph from schema_def, finds the minimum connecting subset
     of tables for all tables referenced in subset, and returns the result
     sorted by table name then column name.
 
-    subset format   : ["column_name.table_name", ...]
-    output format   : ["column_name.table_name", ...] for required tables
-                      ["*.table_name"]               for connector tables
+    Connector tables pulled in to bridge required tables appear as '*.table_name'
+    since no specific columns were requested for them.
+
+    Args:
+        schema_def: Full database schema as a nested dictionary.
+            Each key is a table name. Each value is a dict with:
+                columns     (list[str]): Column names in the table.
+                connections (list[str]): Tables this table has a FK
+                                         relationship with. Relationships
+                                         are undirected — declaring A -> B
+                                         is sufficient.
+            Example:
+                {
+                    "orders": {
+                        "columns":     ["order_id", "customer_id"],
+                        "connections": ["customers", "order_items"]
+                    },
+                    ...
+                }
+
+        subset: Column references in 'column_name.table_name' format
+            representing the columns relevant to the query.
+            Example:
+                ["email.customers", "order_date.orders"]
+
+    Returns:
+        Flat list of strings sorted by table name then column name:
+            "column_name.table_name"  for requested columns.
+            "*.table_name"            for connector tables.
+        Example:
+            ["email.customers", "*.order_items", "order_date.orders"]
+
+    Raises:
+        ValueError: If subset is empty.
+        ValueError: If an entry does not match 'column_name.table_name' format.
+        ValueError: If a table referenced in subset is not in schema_def.
+
+    Examples:
+        Direct connection — no connector needed:
+            >>> get_minimal_subschema(schema, ["email.customers", "order_date.orders"])
+            ['email.customers', 'order_date.orders']
+
+        Connector pulled in automatically:
+            >>> get_minimal_subschema(schema, ["order_date.orders", "name.products"])
+            ['*.order_items', 'order_date.orders', 'name.products']
+
+        Long chain — multiple connectors:
+            >>> get_minimal_subschema(schema, ["email.customers", "description.categories"])
+            ['description.categories', 'email.customers', '*.order_items', '*.orders', '*.products']
     """
     if not subset:
         raise ValueError("subset must contain at least one column reference.")
@@ -194,8 +240,13 @@ def get_minimal_subschema(schema_def: dict[str, dict], subset: list[str]) -> lis
             raise ValueError(
                 f"Invalid format: '{entry}'. Expected 'column_name.table_name'."
             )
-        col, table = parts[0], parts[1]
+        table = parts[1]
         table_columns.setdefault(table, []).append(entry)
+
+    # Validate all referenced tables exist in schema
+    for table in table_columns:
+        if table not in schema.get_table_names():
+            raise ValueError(f"Table '{table}' not found in schema.")
 
     # Find minimum connecting subset
     components = find_minimum_subset(schema, list(table_columns.keys()))
