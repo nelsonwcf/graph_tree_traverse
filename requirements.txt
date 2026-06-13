@@ -1,0 +1,9 @@
+colorama==0.4.6
+iniconfig==2.3.0
+packaging==26.2
+pluggy==1.6.0
+Pygments==2.20.0
+pytest==9.0.3
+-e git+https://github.com/nelsonwcf/graph_tree_traverse.git@263fe064dbe132905c1c90f3da170a649f658be0#egg=schema_router
+setuptools==82.0.1
+wheel==0.47.0
